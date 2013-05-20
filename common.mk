@@ -25,6 +25,10 @@ ifeq ($(ARCH_ARM_HAVE_NEON),true)
     common_flags += -D__ARM_HAVE_NEON
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM), msm8660)
+    common_flags += -DTWO_FB_DEVICES
+endif
+
 ifeq ($(TARGET_BOARD_PLATFORM), msm8974)
     common_flags += -DVENUS_COLOR_FORMAT
     common_flags += -DMDSS_TARGET

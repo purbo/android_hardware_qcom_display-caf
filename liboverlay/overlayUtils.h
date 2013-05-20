@@ -78,7 +78,12 @@
 #endif
 
 #define FB_DEVICE_TEMPLATE "/dev/graphics/fb%u"
+
+#ifdef TWO_FB_DEVICES
+#define NUM_FB_DEVICES 2
+#else
 #define NUM_FB_DEVICES 3
+#endif
 
 namespace overlay {
 
