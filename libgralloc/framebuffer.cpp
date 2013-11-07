@@ -244,7 +244,7 @@ int mapFrameBufferLocked(struct private_module_t* module)
 
     float xdpi = (info.xres * 25.4f) / info.width;
     float ydpi = (info.yres * 25.4f) / info.height;
-#ifdef MSMFB_METADATA_GET
+#ifndef USE_RESERVED_FIELDS && defined MSMFB_METADATA_GET
     struct msmfb_metadata metadata;
     memset(&metadata, 0 , sizeof(metadata));
     metadata.op = metadata_op_frame_rate;
