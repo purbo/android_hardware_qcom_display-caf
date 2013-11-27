@@ -378,6 +378,12 @@ void getActionSafePosition(hwc_context_t *ctx, int dpy, hwc_rect_t& rect) {
 
     float fbWidth = ctx->dpyAttr[dpy].xres;
     float fbHeight = ctx->dpyAttr[dpy].yres;
+    if(ctx->dpyAttr[dpy].mDownScaleMode) {
+        // if downscale Mode is enabled for external, need to query
+        // the actual width and height, as that is the physical w & h
+        ctx->mExtDisplay->getAttributes((int&)fbWidth, (int&)fbHeight);
+    }
+
 
     // Since external is rotated 90, need to swap width/height
     int extOrient = getExtOrientation(ctx);
@@ -991,7 +997,7 @@ hwc_rect_t getUnion(const hwc_rect &rect1, const hwc_rect &rect2)
    also it avoid hole creation.*/
 void deductRect(const hwc_layer_1_t* layer, hwc_rect_t& irect) {
     hwc_rect_t& disprect = (hwc_rect_t&)layer->displayFrame;
-    hwc_rect_t& srcrect = (hwc_rect_t&)layer->sourceCrop;
+    hwc_rect_t srcrect = integerizeSourceCrop(layer->sourceCropf);
     int irect_w = irect.right - irect.left;
     int irect_h = irect.bottom - irect.top;
 
@@ -1427,8 +1433,10 @@ int configureLowRes(hwc_context_t *ctx, hwc_layer_1_t *layer,
     eTransform orient = static_cast<eTransform>(transform);
     int downscale = 0;
     int rotFlags = ovutils::ROT_FLAGS_NONE;
+    bool forceRot = false;
     Whf whf(getWidth(hnd), getHeight(hnd),
             getMdpFormat(hnd->format), hnd->size);
+
     if(dpy && isYuvBuffer(hnd)) {
         if(!ctx->listStats[dpy].isDisplayAnimating) {
             ctx->mPrevCropVideo = crop;
@@ -1449,9 +1457,10 @@ int configureLowRes(hwc_context_t *ctx, hwc_layer_1_t *layer,
                 z = ZORDER_1;
             }
         }
-        calcExtDisplayPosition(ctx, hnd, dpy, crop, dst,
-                                           transform, orient);
     }
+
+    calcExtDisplayPosition(ctx, hnd, dpy, crop, dst,
+                                           transform, orient);
 
     if(isYuvBuffer(hnd) && ctx->mMDP.version >= qdutils::MDP_V4_2 &&
        ctx->mMDP.version < qdutils::MDSS_V5) {
@@ -1463,13 +1472,24 @@ int configureLowRes(hwc_context_t *ctx, hwc_layer_1_t *layer,
         if(downscale) {
             rotFlags = ROT_DOWNSCALE_ENABLED;
         }
+        unsigned int& prevWidth = ctx->mPrevWHF[dpy].w;
+        unsigned int& prevHeight = ctx->mPrevWHF[dpy].h;
+        if(prevWidth != (uint32_t)getWidth(hnd) ||
+               prevHeight != (uint32_t)getHeight(hnd)) {
+            uint32_t prevBufArea = (prevWidth * prevHeight);
+            if(prevBufArea) {
+                forceRot = true;
+            }
+            prevWidth = (uint32_t)getWidth(hnd);
+            prevHeight = (uint32_t)getHeight(hnd);
+        }
     }
 
     setMdpFlags(layer, mdpFlags, downscale, transform);
     trimLayer(ctx, dpy, transform, crop, dst);
 
     if(isYuvBuffer(hnd) && //if 90 component or downscale, use rot
-            ((transform & HWC_TRANSFORM_ROT_90) || downscale)) {
+            ((transform & HWC_TRANSFORM_ROT_90) || downscale || forceRot)) {
         *rot = ctx->mRotMgr->getNext();
         if(*rot == NULL) return -1;
         Whf origWhf(hnd->width, hnd->height,
