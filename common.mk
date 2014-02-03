@@ -48,3 +48,7 @@ endif
 ifeq ($(TARGET_DISPLAY_USE_RESERVED_FIELDS),true)
     common_flags += -DUSE_RESERVED_FIELDS
 endif
+
+ifeq ($(TARGET_BOARD_PLATFORM),msm8660)
+    common_flags += -DNO_IOMMU
+endif
