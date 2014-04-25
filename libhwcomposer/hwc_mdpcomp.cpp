@@ -169,7 +169,6 @@ void MDPComp::setMDPCompLayerFlags(hwc_context_t *ctx,
             layerProp[index].mFlags |= HWC_MDPCOMP;
             layer->compositionType = HWC_OVERLAY;
             layer->hints |= HWC_HINT_CLEAR_FB;
-            mCachedFrame.hnd[index] = NULL;
         } else {
             if(!mCurrentFrame.needsRedraw)
                 layer->compositionType = HWC_OVERLAY;
@@ -448,12 +447,18 @@ bool MDPComp::isFullFrameDoable(hwc_context_t *ctx,
     for(int i = 0; i < numAppLayers; ++i) {
         hwc_layer_1_t* layer = &list->hwLayers[i];
         private_handle_t *hnd = (private_handle_t *)layer->handle;
-
         if((layer->planeAlpha < 0xFF) &&
                 qhwc::needsScaling(ctx,layer,mDpy)){
             ALOGD_IF(isDebug(),
                 "%s: Disable mixed mode if frame needs plane alpha downscaling",
                 __FUNCTION__);
+            return false;
+        }
+
+        // If buffer is non contiguous then force GPU comp
+        if(isNonContigBuffer(hnd)) {
+            ALOGD_IF(isDebug(), "%s: Buffer is Non contiguous,"
+                                "so mdpcomp is not possible",__FUNCTION__);
             return false;
         }
 
@@ -619,6 +624,13 @@ bool MDPComp::isOnlyVideoDoable(hwc_context_t *ctx,
             ALOGD_IF(isDebug(), "%s: Cannot handle YUV layer with plane alpha\
                     in video only mode",
                     __FUNCTION__);
+            return false;
+        }
+        private_handle_t *hnd = (private_handle_t *)layer->handle;
+        // If buffer is non contiguous then force GPU comp
+        if(isNonContigBuffer(hnd)) {
+            ALOGD_IF(isDebug(), "%s: Buffer is Non contiguous,"
+                                "so mdpcomp is not possible",__FUNCTION__);
             return false;
         }
     }

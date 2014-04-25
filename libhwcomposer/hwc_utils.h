@@ -274,7 +274,7 @@ void updateSource(ovutils::eTransform& orient, ovutils::Whf& whf,
         hwc_rect_t& crop);
 
 bool needToForceRotator(hwc_context_t *ctx, const int& dpy,
-         uint32_t w, uint32_t h);
+         uint32_t w, uint32_t h, int transform);
 
 //Routine to configure low resolution panels (<= 2048 width)
 int configureLowRes(hwc_context_t *ctx, hwc_layer_1_t *layer, const int& dpy,
@@ -302,6 +302,12 @@ static inline bool isYuvBuffer(const private_handle_t* hnd) {
 static inline bool isSecureBuffer(const private_handle_t* hnd) {
     return (hnd && (private_handle_t::PRIV_FLAGS_SECURE_BUFFER & hnd->flags));
 }
+
+// Returns true if the buffer is non contiguous
+static inline bool isNonContigBuffer(const private_handle_t* hnd) {
+    return (hnd && (private_handle_t::PRIV_FLAGS_NONCONTIGUOUS_MEM & hnd->flags));
+}
+
 //Return true if buffer is marked locked
 static inline bool isBufferLocked(const private_handle_t* hnd) {
     return (hnd && (private_handle_t::PRIV_FLAGS_HWC_LOCK & hnd->flags));
